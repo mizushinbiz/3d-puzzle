@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>3D パズル 6x6x6</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="ui-layer">
+    <div id="start-menu" class="panel">
+      <h1>3Dパズル 6x6x6</h1>
+      <p>4つ揃えれば勝ち！（立体四目並べ）</p>
+      <button id="btn-pvp">人間 vs 人間</button>
+      <button id="btn-pvc">人間 vs CPU</button>
+    </div>
+    
+    <div id="game-ui" class="hidden">
+      <div id="status-bar">
+        <span id="turn-indicator">プレイヤー1のターン</span>
+      </div>
+      <div id="controls">
+        <button id="btn-cancel" disabled>キャンセル</button>
+        <button id="btn-decide" disabled>決定</button>
+      </div>
+    </div>
+
+    <div id="result-panel" class="panel hidden">
+      <h2 id="result-text"></h2>
+      <button id="btn-restart">もう一度遊ぶ</button>
+    </div>
+  </div>
+
+  <!-- Three.js は ES Modules で読み込みます -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
