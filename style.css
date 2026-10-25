@@ -144,3 +144,212 @@ canvas {
   background-color: #eaeaea !important;
   color: #aaa !important;
 }
+
+/* カメラ視点操作パネル */
+#camera-panel {
+  position: absolute;
+  right: 18px;
+  top: 75px;
+  width: 220px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  pointer-events: auto;
+  z-index: 50;
+  transition: box-shadow 0.2s ease;
+  user-select: none;
+}
+
+.camera-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.camera-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #222;
+}
+
+.icon-toggle-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  color: #555;
+  font-size: 1rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-toggle-btn:hover {
+  background: #f0f0f0;
+  color: #111;
+}
+
+.camera-panel-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.camera-panel-body.collapsed {
+  display: none;
+}
+
+.cam-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cam-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #777;
+  letter-spacing: 0.3px;
+}
+
+.cam-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  color: #333;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.cam-btn:hover {
+  background: #007AFF;
+  color: #ffffff;
+  border-color: #007AFF;
+  box-shadow: 0 4px 10px rgba(0, 122, 255, 0.3);
+}
+
+.cam-btn:active, .cam-btn.is-active {
+  background: #0056b3;
+  color: #ffffff;
+  border-color: #0056b3;
+  transform: scale(0.94);
+}
+
+.cam-btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cam-btn-row .cam-btn {
+  padding: 7px 10px;
+}
+
+.cam-dpad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.dpad-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dpad-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+
+.dpad-center {
+  background: #f7f9fa;
+  color: #007AFF;
+  border-color: rgba(0, 122, 255, 0.2);
+}
+
+.dpad-center:hover {
+  background: #007AFF;
+  color: #fff;
+}
+
+.dpad-center-tag {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #888;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+}
+
+.cam-guide {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.68rem;
+  color: #555;
+  border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.cam-guide-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.cam-guide ul {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cam-guide li span {
+  font-weight: 700;
+  color: #007AFF;
+  background: rgba(0, 122, 255, 0.08);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-right: 2px;
+}
+
+@media (max-width: 600px) {
+  #camera-panel {
+    right: 10px;
+    top: 65px;
+    width: 195px;
+  }
+  .cam-guide {
+    display: none; /* スマホでは画面領域確保のためキーガイドを非表示 */
+  }
+}

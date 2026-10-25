@@ -17,6 +17,24 @@ let hoverPreviewMesh = null;
 let hoveredPole = null; // {x, z}
 let walls; // 壁グループの参照
 
+// カメラ初期位置の定数
+const INITIAL_CAMERA_POS = new THREE.Vector3(10, 8, 10);
+const INITIAL_TARGET = new THREE.Vector3(2.5, 3, 2.5);
+
+// カメラ操作状態
+const activeActions = {
+  rotateLeft: false,
+  rotateRight: false,
+  rotateUp: false,
+  rotateDown: false,
+  panLeft: false,
+  panRight: false,
+  panUp: false,
+  panDown: false,
+  zoomIn: false,
+  zoomOut: false
+};
+
 // マテリアルの定義
 const matP1 = new THREE.MeshLambertMaterial({ color: 0x007AFF }); // スタイリッシュな青
 const matP2 = new THREE.MeshLambertMaterial({ color: 0xFF3B30 }); // スタイリッシュな赤
@@ -140,6 +158,9 @@ function init() {
   document.getElementById('btn-decide').addEventListener('click', onDecide);
   document.getElementById('btn-cancel').addEventListener('click', clearPreview);
   document.getElementById('btn-restart').addEventListener('click', resetGame);
+
+  // カメラ操作の初期化
+  setupCameraControls();
 }
 
 function onWindowResize() {
@@ -439,6 +460,7 @@ function updateWallVisibility() {
 
 function animate() {
   requestAnimationFrame(animate);
+  updateContinuousCameraControls();
   controls.update();
   
   updateWallVisibility();
@@ -466,4 +488,293 @@ function animate() {
   });
 
   renderer.render(scene, camera);
+}
+
+// --- カメラ・視点操作機能 ---
+
+function zoomCamera(delta) {
+  const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+  const currentDist = offset.length();
+  const factor = 1 - delta;
+  const newDist = currentDist * factor;
+  
+  // 距離制限 (3〜45)
+  if (newDist >= 3 && newDist <= 45) {
+    offset.multiplyScalar(factor);
+    camera.position.addVectors(controls.target, offset);
+    controls.update();
+  }
+}
+
+function rotateCamera(deltaTheta, deltaPhi) {
+  const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+  const spherical = new THREE.Spherical().setFromVector3(offset);
+  
+  spherical.theta += deltaTheta;
+  spherical.phi += deltaPhi;
+  
+  // ジンバルロック（極付近でのフリップ）防止
+  const EPS = 0.05;
+  spherical.phi = Math.max(EPS, Math.min(Math.PI - EPS, spherical.phi));
+  
+  offset.setFromSpherical(spherical);
+  camera.position.addVectors(controls.target, offset);
+  controls.update();
+}
+
+function panCamera(deltaX, deltaY) {
+  const right = new THREE.Vector3();
+  const up = new THREE.Vector3();
+  camera.matrix.extractBasis(right, up, new THREE.Vector3());
+  
+  right.normalize().multiplyScalar(deltaX);
+  up.normalize().multiplyScalar(deltaY);
+  
+  const moveOffset = new THREE.Vector3().addVectors(right, up);
+  camera.position.add(moveOffset);
+  controls.target.add(moveOffset);
+  controls.update();
+}
+
+function resetCameraView() {
+  camera.position.copy(INITIAL_CAMERA_POS);
+  controls.target.copy(INITIAL_TARGET);
+  controls.update();
+}
+
+function triggerActionOnce(action) {
+  const stepRot = Math.PI / 24; // 約7.5度
+  const stepPan = 0.45;
+  const stepZoom = 0.09;
+
+  switch (action) {
+    case 'rotateLeft': rotateCamera(stepRot, 0); break;
+    case 'rotateRight': rotateCamera(-stepRot, 0); break;
+    case 'rotateUp': rotateCamera(0, -stepRot); break;
+    case 'rotateDown': rotateCamera(0, stepRot); break;
+    case 'panLeft': panCamera(-stepPan, 0); break;
+    case 'panRight': panCamera(stepPan, 0); break;
+    case 'panUp': panCamera(0, stepPan); break;
+    case 'panDown': panCamera(0, -stepPan); break;
+    case 'zoomIn': zoomCamera(stepZoom); break;
+    case 'zoomOut': zoomCamera(-stepZoom); break;
+  }
+}
+
+function updateContinuousCameraControls() {
+  const rotSpeed = 0.025;
+  const panSpeed = 0.08;
+  const zoomSpeed = 0.02;
+
+  if (activeActions.rotateLeft) rotateCamera(rotSpeed, 0);
+  if (activeActions.rotateRight) rotateCamera(-rotSpeed, 0);
+  if (activeActions.rotateUp) rotateCamera(0, -rotSpeed);
+  if (activeActions.rotateDown) rotateCamera(0, rotSpeed);
+
+  if (activeActions.panLeft) panCamera(-panSpeed, 0);
+  if (activeActions.panRight) panCamera(panSpeed, 0);
+  if (activeActions.panUp) panCamera(0, panSpeed);
+  if (activeActions.panDown) panCamera(0, -panSpeed);
+
+  if (activeActions.zoomIn) zoomCamera(zoomSpeed);
+  if (activeActions.zoomOut) zoomCamera(-zoomSpeed);
+}
+
+function setupCameraControls() {
+  const camPanel = document.getElementById('camera-panel');
+  if (!camPanel) return;
+
+  // パネル内でのタッチ・クリックが3D盤面に貫通しないようにする
+  camPanel.addEventListener('pointerdown', (e) => e.stopPropagation());
+  camPanel.addEventListener('pointermove', (e) => e.stopPropagation());
+
+  // トグルボタン（最小化・展開）
+  const btnToggle = document.getElementById('btn-toggle-cam-panel');
+  const panelBody = document.getElementById('camera-panel-body');
+  if (btnToggle && panelBody) {
+    btnToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      panelBody.classList.toggle('collapsed');
+      const isCollapsed = panelBody.classList.contains('collapsed');
+      btnToggle.textContent = isCollapsed ? '＋' : '−';
+      btnToggle.setAttribute('aria-label', isCollapsed ? 'パネルを展開' : 'パネルを折りたたむ');
+    });
+  }
+
+  // 初期視点リセットボタン
+  const btnReset = document.getElementById('btn-cam-reset');
+  if (btnReset) {
+    btnReset.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetCameraView();
+    });
+  }
+
+  // アクションボタン（長押し & クリック対応）
+  const actionButtons = camPanel.querySelectorAll('[data-action]');
+  actionButtons.forEach(btn => {
+    const action = btn.getAttribute('data-action');
+    if (!action) return;
+
+    const startAction = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      btn.classList.add('is-active');
+      activeActions[action] = true;
+      triggerActionOnce(action);
+    };
+
+    const stopAction = (e) => {
+      btn.classList.remove('is-active');
+      activeActions[action] = false;
+    };
+
+    btn.addEventListener('pointerdown', startAction);
+    btn.addEventListener('pointerup', stopAction);
+    btn.addEventListener('pointerleave', stopAction);
+    btn.addEventListener('pointercancel', stopAction);
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  });
+
+  // キーボード操作対応
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+  window.addEventListener('blur', () => {
+    for (let key in activeActions) {
+      activeActions[key] = false;
+    }
+    actionButtons.forEach(btn => btn.classList.remove('is-active'));
+  });
+}
+
+function onKeyDown(e) {
+  if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+
+  const isShift = e.shiftKey;
+  let handled = false;
+
+  switch (e.code) {
+    // 矢印キー
+    case 'ArrowLeft':
+      if (isShift) activeActions.panLeft = true;
+      else activeActions.rotateLeft = true;
+      handled = true;
+      break;
+    case 'ArrowRight':
+      if (isShift) activeActions.panRight = true;
+      else activeActions.rotateRight = true;
+      handled = true;
+      break;
+    case 'ArrowUp':
+      if (isShift) activeActions.panUp = true;
+      else activeActions.rotateUp = true;
+      handled = true;
+      break;
+    case 'ArrowDown':
+      if (isShift) activeActions.panDown = true;
+      else activeActions.rotateDown = true;
+      handled = true;
+      break;
+
+    // 位置移動 (WASD)
+    case 'KeyW':
+      activeActions.panUp = true;
+      handled = true;
+      break;
+    case 'KeyS':
+      activeActions.panDown = true;
+      handled = true;
+      break;
+    case 'KeyA':
+      activeActions.panLeft = true;
+      handled = true;
+      break;
+    case 'KeyD':
+      activeActions.panRight = true;
+      handled = true;
+      break;
+
+    // 拡大・縮小
+    case 'Equal': // Shift + ';' on JIS, '=' on US
+    case 'NumpadAdd':
+    case 'KeyQ':
+    case 'PageUp':
+      activeActions.zoomIn = true;
+      handled = true;
+      break;
+    case 'Minus':
+    case 'NumpadSubtract':
+    case 'KeyE':
+    case 'PageDown':
+      activeActions.zoomOut = true;
+      handled = true;
+      break;
+
+    // 初期視点リセット
+    case 'KeyR':
+    case 'Home':
+      resetCameraView();
+      handled = true;
+      break;
+  }
+
+  // JISキーボードや各種キー配列用フォールバック
+  if (!handled) {
+    if (e.key === '+' || e.key === ';') {
+      activeActions.zoomIn = true;
+      handled = true;
+    } else if (e.key === '-') {
+      activeActions.zoomOut = true;
+      handled = true;
+    } else if (e.key === 'r' || e.key === 'R') {
+      resetCameraView();
+      handled = true;
+    }
+  }
+
+  if (handled) {
+    e.preventDefault();
+  }
+}
+
+function onKeyUp(e) {
+  switch (e.code) {
+    case 'ArrowLeft':
+      activeActions.rotateLeft = false;
+      activeActions.panLeft = false;
+      break;
+    case 'ArrowRight':
+      activeActions.rotateRight = false;
+      activeActions.panRight = false;
+      break;
+    case 'ArrowUp':
+      activeActions.rotateUp = false;
+      activeActions.panUp = false;
+      break;
+    case 'ArrowDown':
+      activeActions.rotateDown = false;
+      activeActions.panDown = false;
+      break;
+
+    case 'KeyW': activeActions.panUp = false; break;
+    case 'KeyS': activeActions.panDown = false; break;
+    case 'KeyA': activeActions.panLeft = false; break;
+    case 'KeyD': activeActions.panRight = false; break;
+
+    case 'Equal':
+    case 'NumpadAdd':
+    case 'KeyQ':
+    case 'PageUp':
+      activeActions.zoomIn = false;
+      break;
+    case 'Minus':
+    case 'NumpadSubtract':
+    case 'KeyE':
+    case 'PageDown':
+      activeActions.zoomOut = false;
+      break;
+  }
+
+  if (e.key === '+' || e.key === ';') activeActions.zoomIn = false;
+  if (e.key === '-') activeActions.zoomOut = false;
 }
